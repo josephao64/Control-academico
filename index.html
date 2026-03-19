@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>SISTEMA DE ENTREGAS ESTUDIANTILES</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f4f7f6; color: #333; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        h1, h2 { text-align: center; color: #2c3e50; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; margin-bottom: 10px;}
+        button { background: #3498db; color: white; border: none; padding: 12px; width: 100%; border-radius: 5px; font-size: 16px; cursor: pointer; }
+        button:hover { background: #2980b9; }
+        
+        .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; margin-top: 20px; }
+        .card { border: 1px solid #eee; border-radius: 8px; overflow: hidden; }
+        .card img { width: 100%; height: 160px; object-fit: cover; }
+        .card .info { padding: 10px; text-align: center; background: #fafafa; }
+        .card p { margin: 0; font-weight: bold; }
+        .card span { font-size: 12px; color: #7f8c8d; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Sistema de Entregas - Colegio Académico</h1>
+        
+        <form id="formEntrega">
+            <div class="form-group">
+                <label>Nombre del Alumno:</label>
+                <input type="text" id="nombre" required placeholder="Ej. Ana Pérez">
+            </div>
+            <div class="form-group">
+                <label>Grado:</label>
+                <select id="grado" required>
+                    <option value="">Selecciona un grado...</option>
+                    <option value="1º Primaria">1º Primaria</option>
+                    <option value="2º Primaria">2º Primaria</option>
+                    <option value="3º Primaria">3º Primaria</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Captura del Trabajo:</label>
+                <input type="file" id="imagen" accept="image/*" required>
+            </div>
+            <button type="submit" id="btnSubmit">Subir Trabajo</button>
+        </form>
+
+        <hr style="margin: 40px 0; border-top: 1px solid #eee;">
+
+        <h2>Galería Escolar</h2>
+        <div id="galeria" class="gallery"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3000'; 
+
+        document.addEventListener('DOMContentLoaded', cargarTrabajos);
+
+        document.getElementById('formEntrega').addEventListener('submit', async (e) => {
+            e.preventDefault(); 
+            
+            const btn = document.getElementById('btnSubmit');
+            btn.textContent = 'Enviando...';
+            btn.disabled = true;
+
+            const formData = new FormData();
+            formData.append('nombre', document.getElementById('nombre').value);
+            formData.append('grado', document.getElementById('grado').value);
+            formData.append('imagen', document.getElementById('imagen').files[0]);
+
+            try {
+                const respuesta = await fetch(`${API_URL}/subir`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if(respuesta.ok) {
+                    alert('¡Trabajo enviado con éxito!');
+                    document.getElementById('formEntrega').reset(); 
+                    cargarTrabajos(); 
+                } else {
+                    alert('Hubo un error al guardar el trabajo');
+                }
+            } catch (error) {
+                console.error(error);
+                alert('Hubo un error de conexión');
+            } finally {
+                btn.textContent = 'Subir Trabajo';
+                btn.disabled = false;
+            }
+        });
+
+        async function cargarTrabajos() {
+            const contenedor = document.getElementById('galeria');
+            contenedor.innerHTML = '<p>Cargando entregas...</p>';
+
+            try {
+                const respuesta = await fetch(`${API_URL}/trabajos`);
+                const trabajos = await respuesta.json();
+                
+                contenedor.innerHTML = ''; 
+
+                if(trabajos.length === 0) {
+                    contenedor.innerHTML = '<p>Aún no hay entregas.</p>';
+                } else {
+                    trabajos.forEach(trabajo => {
+                        contenedor.innerHTML += `
+                            <div class="card">
+                                <img src="${trabajo.url_imagen}" alt="Trabajo">
+                                <div class="info">
+                                    <p>${trabajo.nombre_alumno}</p>
+                                    <span>${trabajo.grado}</span>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+            } catch (error) {
+                contenedor.innerHTML = '<p style="color:red">Error al cargar la galería</p>';
+            }
+        }
+    </script>
+</body>
+</html>
