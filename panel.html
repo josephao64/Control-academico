@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Panel del Maestro - Colegio Académico</title>
+    <style>
+        :root { --primary: #3498db; --secondary: #2c3e50; --bg: #f4f7f6; --text: #333; --light-border: #eee;}
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg); margin: 0; display:flex; height:100vh; overflow:hidden;}
+        
+        /* Sidebar Left */
+        .sidebar { width: 250px; background: white; border-right: 1px solid var(--light-border); display:flex; flex-direction:column; flex-shrink:0;}
+        .sidebar-header { padding: 20px; font-weight: bold; color: var(--secondary); border-bottom: 1px solid var(--light-border); display:flex; align-items:center; gap:10px;}
+        .nav-menu { list-style:none; padding:0; margin:0; flex:1; overflow-y:auto;}
+        .nav-menu li { padding: 15px 20px; cursor: pointer; border-bottom: 1px solid #fafafa; color:#555; transition:0.2s;}
+        .nav-menu li:hover, .nav-menu li.active { background: #f0f8ff; color: var(--primary); border-left: 4px solid var(--primary); font-weight:bold;}
+        .nav-section { padding: 15px 20px 5px; font-size:12px; color:#999; text-transform:uppercase; font-weight:bold;}
+
+        /* Main Content */
+        .main-content { flex: 1; padding: 20px 30px; overflow-y:auto; display:flex; flex-direction:column;}
+        .topbar { display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px; padding-bottom:15px; border-bottom: 1px solid var(--light-border);}
+        .topbar h2 { margin:0; color:var(--secondary);}
+        .user-menu { display:flex; align-items:center; gap:15px; cursor:pointer;}
+
+        /* Right Panel */
+        .eval-panel { width: 320px; background: white; border-left: 1px solid var(--light-border); padding:20px; overflow-y:auto; flex-shrink:0;}
+        .eval-panel h3 { color:var(--secondary); margin-top:0; font-size:16px;}
+        .btn-outline { border: 1px solid var(--primary); color: var(--primary); background: transparent; padding: 8px 15px; border-radius: 5px; cursor:pointer; width:100%; margin-bottom:10px; font-weight:bold; transition:0.2s;}
+        .btn-outline:hover { background: var(--primary); color: white;}
+        .eval-preview { width:100%; height:180px; background:#f0f0f0; border-radius:8px; margin-bottom:15px; display:flex; justify-content:center; align-items:center; overflow:hidden;}
+        .eval-preview img { width:100%; height:100%; object-fit:cover;}
+        
+        input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; margin-bottom:10px;}
+        .btn-primary { background: var(--primary); color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor:pointer; width:100%; font-weight:bold;}
+        .btn-primary:hover { background: #2980b9;}
+        .btn-danger { background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor:pointer;}
+
+        /* Tables & Cards */
+        table { width:100%; border-collapse: collapse; background:white; border-radius:8px; overflow:hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.05);}
+        th, td { padding: 12px 15px; text-align:left; border-bottom: 1px solid #eee;}
+        th { background: #fafafa; font-weight:bold; color:var(--secondary);}
+        
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
+        .card { background: white; border: 1px solid #eee; border-radius: 8px; padding: 15px; cursor:pointer; transition:0.2s;}
+        .card:hover { border-color:var(--primary); box-shadow: 0 4px 8px rgba(0,0,0,0.05);}
+        .card.active { border: 2px solid var(--primary);}
+        .badge { padding:3px 8px; border-radius:12px; font-size:11px; font-weight:bold; color:white;}
+        .badge.pendiente { background: #f39c12; }
+        .badge.calificada { background: #2ecc71; }
+
+        .hidden { display: none !important; }
+        .view-section { display:none; }
+        .view-section.active { display:block; }
+
+        /* Modals & Course Cards */
+        .modal-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:none; justify-content:center; align-items:center; z-index:1000;}
+        .course-card { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.06); transition: 0.3s; position:relative; border: 1px solid #eee;}
+        .course-card:hover { transform: translateY(-3px); box-shadow: 0 8px 16px rgba(0,0,0,0.1); border-color:var(--primary); }
+        .course-image { width:100%; height:140px; background:#e1e8ed; object-fit:cover; display:block;}
+        .course-info { padding: 15px; }
+        .course-title { font-weight:bold; font-size:16px; color:var(--secondary); margin:0 0 5px 0;}
+        .course-grade { font-size:12px; color:#777; font-weight:bold;}
+        .course-actions { position:absolute; top:10px; right:10px; display:flex; gap:5px; opacity:0; transition:0.2s;}
+        .course-card:hover .course-actions { opacity:1;}
+        .action-icon { background:white; color:var(--secondary); border:none; width:30px; height:30px; border-radius:50%; box-shadow:0 2px 4px rgba(0,0,0,0.1); cursor:pointer; display:flex; justify-content:center; align-items:center;}
+        .action-icon:hover { background:var(--bg); }
+        .action-icon.danger:hover { color:#e74c3c; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+
+    <!-- Sidebar Left -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            🎓 Panel Maestro
+        </div>
+        <div class="nav-section">GESTIÓN</div>
+        <ul class="nav-menu">
+            <li onclick="switchView('view-grados', this)">🎓 Grados Académicos</li>
+            <li class="active" onclick="switchView('view-cursos', this)">📚 Cursos (Clases)</li>
+            <li onclick="switchView('view-asignaciones', this)">📝 Asignaciones (CRUD)</li>
+            <li onclick="switchView('view-entregas', this)">📥 Tareas a Calificar</li>
+            <li onclick="switchView('view-calificaciones', this)">🏆 Calificaciones</li>
+        </ul>
+        <div class="nav-section">CONFIGURACIÓN</div>
+        <ul class="nav-menu">
+            <li onclick="logout()">🚪 Cerrar Sesión</li>
+        </ul>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="topbar">
+            <h2 id="view-title">Gestión de Asignaciones (CRUD)</h2>
+            <div class="user-menu">
+                <span>Profesor</span> <div style="width:30px; height:30px; background:var(--primary); color:white; border-radius:50%; display:flex; justify-content:center; align-items:center;">P</div>
+            </div>
+        </div>
+
+        <!-- Vista: Grados -->
+        <div id="view-grados" class="view-section">
+            <div style="display:flex; justify-content:space-between; margin-bottom:15px; align-items:center;">
+                <h3>Mis Grados</h3>
+            </div>
+            <div style="background:white; padding:20px; border-radius:8px; margin-bottom:20px; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
+                <h4>Añadir Grado Existente</h4>
+                <div style="display:flex; gap:10px;">
+                    <input type="text" id="nuevo-grado-nombre" placeholder="Ej. 1º Primaria" required>
+                    <button class="btn-primary" style="width:150px;" onclick="crearGrado()">Añadir</button>
+                </div>
+            </div>
+            <table>
+                <thead><tr><th>Nombre del Grado</th><th>Acciones</th></tr></thead>
+                <tbody id="lista-grados"><tr><td colspan="2">Cargando...</td></tr></tbody>
+            </table>
+        </div>
+
+        <!-- Vista: Cursos -->
+        <div id="view-cursos" class="view-section active">
+            <div style="display:flex; justify-content:space-between; margin-bottom:15px; align-items:center;">
+                <h3>Mis Cursos</h3>
+                <button class="btn-primary" style="width:auto; max-width:180px;" onclick="document.getElementById('modal-curso').style.display='flex'">+ Crear Nuevo Curso</button>
+            </div>
+            
+            <div id="grid-cursos" class="grid" style="grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));">
+                <p>Cargando cursos...</p>
+            </div>
+        </div>
+
+        <!-- Vista: Asignaciones -->
+        <div id="view-asignaciones" class="view-section">
+            <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
+                <h3>Lista de Tareas</h3>
+                <button class="btn-primary" style="width:auto;" onclick="document.getElementById('form-asignacion').classList.toggle('hidden')">+ Crear Nueva Tarea</button>
+            </div>
+            
+            <div id="form-asignacion" class="hidden" style="background:white; padding:20px; border-radius:8px; margin-bottom:20px; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
+                <h4>Crear Tarea</h4>
+                <div style="display:flex; gap:10px;">
+                    <input type="text" id="asig-titulo" placeholder="Título de Tarea" required>
+                    <select id="asig-grado" onchange="actualizarCursosPorGrado()" required>
+                        <option value="">Seleccionar Grado</option>
+                    </select>
+                    <select id="asig-curso" required>
+                        <option value="">Seleccionar Curso</option>
+                    </select>
+                    <input type="date" id="asig-fecha">
+                    <button class="btn-primary" style="width:150px;" onclick="crearAsignacion()">Guardar</button>
+                </div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Título Tarea</th>
+                        <th>Grado</th>
+                        <th>Fecha Creación</th>
+                        <th>Vencimiento</th>
+                        <th>Entregas</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="lista-asignaciones">
+                    <tr><td colspan="6">Cargando...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Vista: Entregas Pendientes -->
+        <div id="view-entregas" class="view-section">
+            <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
+                <select id="filtro-grado" onchange="renderEntregas()">
+                    <option value="Todos">Todos los grados</option>
+                </select>
+                <select id="filtro-estado" onchange="renderEntregas()">
+                    <option value="Pendiente">Pendientes</option>
+                    <option value="Calificada">Calificadas</option>
+                    <option value="Todos">Todos</option>
+                </select>
+            </div>
+            <div id="grid-entregas" class="grid">
+                <p>Cargando entregas...</p>
+            </div>
+        </div>
+
+        <!-- Vista: Calificaciones -->
+        <div id="view-calificaciones" class="view-section">
+            <h3>Historial General</h3>
+            <table>
+                <thead>
+                    <tr><th>Alumno</th><th>Curso</th><th>Grado</th><th>Tarea</th><th>Estado</th><th>Nota</th></tr>
+                </thead>
+                <tbody id="lista-calificaciones"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Right Sidebar (Eval Panel) -->
+    <div class="eval-panel" id="eval-panel">
+        <h3>Herramientas Exportación</h3>
+        <button class="btn-outline" onclick="exportarExcel()">Exportar a Excel (XLSX)</button>
+        
+        <hr style="border:0; border-top:1px solid #eee; margin:20px 0;">
+        
+        <h3>Detalles de Evaluación</h3>
+        <p id="eval-prompt" style="font-size:14px; color:#777;">Selecciona una entrega de la lista "Tareas a Calificar" para evaluarla.</p>
+        
+        <div id="eval-form-container" class="hidden">
+            <div class="eval-preview" id="eval-img-container">
+                <img id="eval-img" src="" alt="Trabajo">
+            </div>
+            <div style="margin-bottom:10px; font-size:14px;">
+                <strong>Alumno:</strong> <span id="eval-nombre"></span><br>
+                <strong>Tarea:</strong> <span id="eval-tarea"></span>
+            </div>
+            
+            <label style="font-size:12px; font-weight:bold; color:#777;">Punteo (/100)</label>
+            <input type="number" id="eval-nota" min="0" max="100" placeholder="Ej. 95">
+            
+            <label style="font-size:12px; font-weight:bold; color:#777;">Comentarios del Maestro</label>
+            <textarea id="eval-comentarios" rows="4" placeholder="Excelente trabajo..."></textarea>
+            
+            <button class="btn-primary" onclick="guardarCalificacion()">Guardar Calificación</button>
+        </div>
+    </div>
+
+    <!-- Modal Nuevo Curso -->
+    <div class="modal-overlay" id="modal-curso">
+        <div style="background:white; padding:30px; border-radius:12px; width:100%; max-width:400px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); position:relative;">
+            <button onclick="document.getElementById('modal-curso').style.display='none'" style="position:absolute; top:15px; right:15px; font-size:20px; cursor:pointer; border:none; background:none; color:#999;">×</button>
+            <h2 style="margin-top:0; color:var(--secondary);">Nuevo Curso</h2>
+            <form id="cursoForm" onsubmit="event.preventDefault(); crearCurso();">
+                <div style="margin-bottom: 15px;">
+                    <label style="display:block; font-weight:bold; margin-bottom:5px; font-size:14px;">Nombre del Curso</label>
+                    <input type="text" id="curso-nombre" placeholder="Ej. Matemáticas 5º" required>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label style="display:block; font-weight:bold; margin-bottom:5px; font-size:14px;">Grado</label>
+                    <select id="curso-grado" required>
+                        <option value="">Seleccionar Grado</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <label style="display:block; font-weight:bold; margin-bottom:5px; font-size:14px;">Imagen de Portada</label>
+                    <div id="drop-zone" style="border: 2px dashed #ccc; border-radius:8px; padding:30px; text-align:center; color:#777; cursor:pointer; background:#fafafa; transition:0.3s;" onclick="document.getElementById('curso-imagen').click()">
+                        <span id="drop-text">Arrastra o haz clic para subir imagen</span>
+                        <input type="file" id="curso-imagen" accept="image/*" style="display:none;" onchange="previewImagenCurso(this)">
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary" id="btnGuardarCurso">Guardar Curso</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = '';
+        const token = localStorage.getItem('profesorToken');
+
+        if (!token) {
+            window.location.href = '/';
+        }
+
+        let asignacionesActuales = [];
+        let entregasActuales = [];
+        let cursosActuales = [];
+        let gradosActuales = [];
+        let trabajoSeleccionado = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            cargarGrados().then(() => {
+                cargarCursos();
+                cargarAsignaciones();
+                cargarEntregas();
+            });
+        });
+
+        const fetchOptions = (method = 'GET', body = null) => {
+            const opts = {
+                method,
+                headers: { 'Authorization': `Bearer ${token}` }
+            };
+            if(body) {
+                opts.headers['Content-Type'] = 'application/json';
+                opts.body = JSON.stringify(body);
+            }
+            return opts;
+        };
+
+        function switchView(viewId, element) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+            
+            document.querySelectorAll('.nav-menu li').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+            
+            const titles = {
+                'view-grados': 'Gestión de Grados Académicos',
+                'view-cursos': 'Administración de Cursos',
+                'view-asignaciones': 'Gestión de Asignaciones (CRUD)',
+                'view-entregas': 'Tareas a Calificar',
+                'view-calificaciones': 'Historial de Calificaciones'
+            };
+            document.getElementById('view-title').textContent = titles[viewId];
+        }
+
+        function logout() {
+            localStorage.removeItem('profesorToken');
+            window.location.href = '/';
+        }
+
+        // --- GRADOS ---
+        async function cargarGrados() {
+            try {
+                const res = await fetch(`${API_URL}/api/grados`, fetchOptions());
+                if(res.status === 401) return logout();
+                gradosActuales = await res.json();
+                
+                const tbody = document.getElementById('lista-grados');
+                if(gradosActuales.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="2">No hay grados creados.</td></tr>';
+                } else {
+                    tbody.innerHTML = gradosActuales.map(g => `
+                        <tr>
+                            <td>${g.nombre}</td>
+                            <td><button class="btn-danger" onclick="eliminarGrado('${g._id}')">🗑️ Eliminar</button></td>
+                        </tr>
+                    `).join('');
+                }
+                actualizarSelectsGrados();
+            } catch(e) { console.error(e); }
+        }
+
+        function actualizarSelectsGrados() {
+            const opciones = `<option value="">Seleccionar Grado</option>` + gradosActuales.map(g => `<option value="${g.nombre}">${g.nombre}</option>`).join('');
+            document.getElementById('curso-grado').innerHTML = opciones;
+            document.getElementById('asig-grado').innerHTML = opciones;
+            document.getElementById('filtro-grado').innerHTML = `<option value="Todos">Todos los grados</option>` + gradosActuales.map(g => `<option value="${g.nombre}">${g.nombre}</option>`).join('');
+        }
+
+        async function crearGrado() {
+            const nombre = document.getElementById('nuevo-grado-nombre').value;
+            if(!nombre) return alert('Nombre obligatorio');
+            try {
+                const res = await fetch(`${API_URL}/api/grados`, fetchOptions('POST', { nombre }));
+                if(res.ok) {
+                    document.getElementById('nuevo-grado-nombre').value = '';
+                    cargarGrados();
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        async function eliminarGrado(id) {
+            if(!confirm('¿Eliminar grado permanentemente?')) return;
+            try {
+                await fetch(`${API_URL}/api/grados/${id}`, fetchOptions('DELETE'));
+                cargarGrados();
+            } catch(e) { console.error(e); }
+        }
+
+        // --- CURSOS ---
+        function previewImagenCurso(input) {
+            if(input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('drop-zone').style.backgroundImage = `url(${e.target.result})`;
+                    document.getElementById('drop-zone').style.backgroundSize = 'cover';
+                    document.getElementById('drop-zone').style.backgroundPosition = 'center';
+                    document.getElementById('drop-text').style.display = 'none';
+                    document.getElementById('drop-zone').style.border = 'none';
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        async function cargarCursos() {
+            try {
+                const res = await fetch(`${API_URL}/api/cursos`, fetchOptions());
+                if(res.status === 401) return logout();
+                cursosActuales = await res.json();
+                
+                const grid = document.getElementById('grid-cursos');
+                if(cursosActuales.length === 0) {
+                    grid.innerHTML = '<p>No hay cursos creadas. Agrega tu primer curso arriba a la derecha.</p>';
+                    return;
+                }
+
+                grid.innerHTML = cursosActuales.map(c => `
+                    <div class="course-card">
+                        <img class="course-image" src="${c.url_imagen}" alt="${c.nombre}">
+                        <div class="course-actions">
+                            <button class="action-icon danger" onclick="eliminarCurso('${c._id}')" title="Eliminar">🗑️</button>
+                        </div>
+                        <div class="course-info">
+                            <h4 class="course-title">${c.nombre}</h4>
+                            <div class="course-grade">${c.grado}</div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch(e) { console.error(e); }
+        }
+
+        async function crearCurso() {
+            const inputFile = document.getElementById('curso-imagen').files[0];
+            if(!inputFile) return alert('Por favor sube una imagen de portada para el curso.');
+
+            const btn = document.getElementById('btnGuardarCurso');
+            btn.textContent = 'Guardando...'; btn.disabled = true;
+
+            const form = new FormData();
+            form.append('nombre', document.getElementById('curso-nombre').value);
+            form.append('grado', document.getElementById('curso-grado').value);
+            form.append('imagen', inputFile);
+
+            try {
+                const res = await fetch(`${API_URL}/api/cursos`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: form
+                });
+                if(res.ok) {
+                    document.getElementById('modal-curso').style.display='none';
+                    document.getElementById('cursoForm').reset();
+                    document.getElementById('drop-zone').style.backgroundImage = 'none';
+                    document.getElementById('drop-text').style.display = 'block';
+                    cargarCursos();
+                } else alert('Error al crear el curso');
+            } catch(e) { console.error(e); } finally {
+                btn.textContent = 'Guardar Curso'; btn.disabled = false;
+            }
+        }
+
+        async function eliminarCurso(id) {
+            if(!confirm('¿Eliminar este curso?')) return;
+            try {
+                await fetch(`${API_URL}/api/cursos/${id}`, fetchOptions('DELETE'));
+                cargarCursos();
+            } catch(e) { console.error(e); }
+        }
+
+        async function cargarAsignaciones() {
+            try {
+                const res = await fetch(`${API_URL}/api/asignaciones`, fetchOptions());
+                if(res.status === 401) return logout();
+                asignacionesActuales = await res.json();
+                
+                const tbody = document.getElementById('lista-asignaciones');
+                if(asignacionesActuales.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6">No hay tareas creadas.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = asignacionesActuales.map(a => `
+                    <tr>
+                        <td>${a.titulo}</td>
+                        <td>${a.grado}</td>
+                        <td>${new Date(a.fecha_creacion).toLocaleDateString()}</td>
+                        <td>${a.fecha_vencimiento ? new Date(a.fecha_vencimiento).toLocaleDateString() : '-'}</td>
+                        <td><strong>${a.entregasCount || 0}</strong></td>
+                        <td>
+                            <button class="btn-danger" onclick="eliminarAsignacion('${a._id}')">🗑️ Eliminar</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch(e) { console.error(e); }
+        }
+
+        function actualizarCursosPorGrado() {
+            const gradoSeleccionado = document.getElementById('asig-grado').value;
+            const cursosFiltrados = cursosActuales.filter(c => c.grado === gradoSeleccionado);
+            const opciones = `<option value="">Seleccionar Curso</option>` + cursosFiltrados.map(c => `<option value="${c.nombre}">${c.nombre}</option>`).join('');
+            document.getElementById('asig-curso').innerHTML = opciones;
+        }
+
+        async function crearAsignacion() {
+            const titulo = document.getElementById('asig-titulo').value;
+            const grado = document.getElementById('asig-grado').value;
+            const curso = document.getElementById('asig-curso').value;
+            const fecha = document.getElementById('asig-fecha').value;
+            if(!titulo || !grado || !curso) return alert('Título, curso y grado obligatorios');
+
+            try {
+                const res = await fetch(`${API_URL}/api/asignaciones`, fetchOptions('POST', { titulo, grado, curso, fecha_vencimiento: fecha }));
+                if(res.ok) {
+                    document.getElementById('asig-titulo').value = '';
+                    document.getElementById('asig-curso').value = '';
+                    cargarAsignaciones();
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        async function eliminarAsignacion(id) {
+            if(!confirm('¿Eliminar esta tarea de forma permanente?')) return;
+            try {
+                await fetch(`${API_URL}/api/asignaciones/${id}`, fetchOptions('DELETE'));
+                cargarAsignaciones();
+            } catch(e) { console.error(e); }
+        }
+
+        async function cargarEntregas() {
+            try {
+                const res = await fetch(`${API_URL}/api/trabajos`, fetchOptions());
+                if(res.status === 401) return logout();
+                entregasActuales = await res.json();
+                renderEntregas();
+                renderCalificaciones();
+            } catch(e) { console.error(e); }
+        }
+
+        function renderEntregas() {
+            const filtroGrado = document.getElementById('filtro-grado').value;
+            const filtroEstado = document.getElementById('filtro-estado').value;
+            
+            let filtradas = entregasActuales;
+            if(filtroGrado !== 'Todos') filtradas = filtradas.filter(e => e.grado === filtroGrado);
+            if(filtroEstado !== 'Todos') filtradas = filtradas.filter(e => e.estado === filtroEstado);
+
+            const grid = document.getElementById('grid-entregas');
+            if(filtradas.length === 0) {
+                grid.innerHTML = '<p>No hay entregas que coincidan con los filtros.</p>';
+                return;
+            }
+
+            grid.innerHTML = filtradas.map(t => {
+                const tareaNombre = t.asignacion_id ? t.asignacion_id.titulo : 'General';
+                const badgeClass = t.estado === 'Pendiente' ? 'pendiente' : 'calificada';
+                const notaTxt = t.estado === 'Calificada' ? ` - ${t.calificacion}/100` : '';
+                
+                return `
+                <div class="card ${trabajoSeleccionado && trabajoSeleccionado._id === t._id ? 'active':''}" onclick='seleccionarTrabajo(${JSON.stringify(t).replace(/'/g, "&apos;")})' style="position:relative;">
+                    <div style="position:absolute; top:10px; right:10px; z-index:10;">
+                        <button class="action-icon danger" style="width:25px; height:25px; font-size:12px;" onclick="event.stopPropagation(); eliminarTrabajo('${t._id}')" title="Eliminar Entrega">🗑️</button>
+                    </div>
+                    <div style="font-size:12px; color:#999; margin-bottom:5px;">${new Date(t.fecha).toLocaleString()}</div>
+                    <div style="font-weight:bold; color:var(--secondary);">${t.nombre_alumno}</div>
+                    <div style="font-size:13px; margin:5px 0;">📚 ${tareaNombre}</div>
+                    <div style="font-size:12px; margin-bottom:5px;">Grado: ${t.grado}</div>
+                    <div style="margin-top:10px;">
+                        <span class="badge ${badgeClass}">${t.estado}${notaTxt}</span>
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+
+        function renderCalificaciones() {
+            const tbody = document.getElementById('lista-calificaciones');
+            tbody.innerHTML = entregasActuales.map(t => {
+                const cursoNombre = t.asignacion_id && t.asignacion_id.curso ? t.asignacion_id.curso : 'General';
+                const tareaNombre = t.asignacion_id ? t.asignacion_id.titulo : 'General';
+                return `
+                <tr>
+                    <td>${t.nombre_alumno}</td>
+                    <td>${cursoNombre}</td>
+                    <td>${t.grado}</td>
+                    <td>${tareaNombre}</td>
+                    <td><span class="badge ${t.estado === 'Pendiente' ? 'pendiente' : 'calificada'}">${t.estado}</span></td>
+                    <td><strong>${t.calificacion || '-'}</strong></td>
+                </tr>
+                `;
+            }).join('');
+        }
+
+        function seleccionarTrabajo(trabajo) {
+            trabajoSeleccionado = trabajo;
+            document.getElementById('eval-prompt').classList.add('hidden');
+            const formContainer = document.getElementById('eval-form-container');
+            formContainer.classList.remove('hidden');
+
+            const container = document.getElementById('eval-img-container');
+            if(trabajo.url_imagen && (trabajo.url_imagen.endsWith('.pdf') || trabajo.url_imagen.includes('/raw/'))) {
+                container.innerHTML = `<a href="${trabajo.url_imagen}" target="_blank" style="padding:20px; text-align:center; display:block; text-decoration:none; font-weight:bold;">📄 Ver PDF Adjunto</a>`;
+            } else {
+                container.innerHTML = `<a href="${trabajo.url_imagen}" target="_blank"><img id="eval-img" src="${trabajo.url_imagen}" alt="Trabajo" style="width:100%; height:100%; object-fit:cover;"></a>`;
+            }
+
+            document.getElementById('eval-nombre').textContent = trabajo.nombre_alumno;
+            document.getElementById('eval-tarea').textContent = trabajo.asignacion_id ? trabajo.asignacion_id.titulo : 'General';
+            
+            document.getElementById('eval-nota').value = trabajo.calificacion || '';
+            document.getElementById('eval-comentarios').value = trabajo.comentarios_maestro || '';
+
+            renderEntregas(); 
+        }
+
+        async function guardarCalificacion() {
+            if(!trabajoSeleccionado) return;
+            const calif = document.getElementById('eval-nota').value;
+            const coment = document.getElementById('eval-comentarios').value;
+
+            try {
+                const res = await fetch(`${API_URL}/api/trabajos/${trabajoSeleccionado._id}/calificar`, fetchOptions('PUT', { 
+                    calificacion: Number(calif), 
+                    comentarios_maestro: coment 
+                }));
+                if(res.ok) {
+                    alert('Calificación guardada con éxito.');
+                    // Actualizamos la lista
+                    cargarEntregas(); 
+                } else {
+                    alert('Error al guardar la calificación.');
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        async function eliminarTrabajo(id) {
+            if(!confirm('¿Eliminar permanentemente esta entrega del alumno?')) return;
+            try {
+                await fetch(`${API_URL}/api/trabajos/${id}`, fetchOptions('DELETE'));
+                if(trabajoSeleccionado && trabajoSeleccionado._id === id) {
+                    trabajoSeleccionado = null;
+                    document.getElementById('eval-form-container').classList.add('hidden');
+                    document.getElementById('eval-prompt').classList.remove('hidden');
+                }
+                cargarEntregas();
+            } catch(e) { console.error(e); }
+        }
+
+        function exportarExcel() {
+            if(entregasActuales.length === 0) return alert('No hay datos para exportar');
+            
+            const datos = entregasActuales.map(t => ({
+                Alumno: t.nombre_alumno,
+                Curso: t.asignacion_id && t.asignacion_id.curso ? t.asignacion_id.curso : 'General',
+                Grado: t.grado,
+                Tarea: t.asignacion_id ? t.asignacion_id.titulo : 'General',
+                Estado: t.estado,
+                Calificacion: t.calificacion,
+                Comentarios: t.comentarios_maestro,
+                Fecha: new Date(t.fecha).toLocaleDateString()
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(datos);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Calificaciones");
+            XLSX.writeFile(wb, "Reporte_Calificaciones.xlsx");
+        }
+    </script>
+</body>
+</html>

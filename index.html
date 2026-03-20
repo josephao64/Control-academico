@@ -2,125 +2,243 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>SISTEMA DE ENTREGAS ESTUDIANTILES</title>
+    <title>SISTEMA DE GESTIÓN ACADÉMICA - ESTUDIANTES</title>
+    <!-- CSS Moderno -->
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background-color: #f4f7f6; color: #333; padding: 20px; }
-        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        h1, h2 { text-align: center; color: #2c3e50; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; font-weight: bold; margin-bottom: 5px; }
-        input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; margin-bottom: 10px;}
-        button { background: #3498db; color: white; border: none; padding: 12px; width: 100%; border-radius: 5px; font-size: 16px; cursor: pointer; }
-        button:hover { background: #2980b9; }
+        :root { --primary: #3498db; --secondary: #2c3e50; --bg: #f4f7f6; --text: #333; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg); color: var(--text); padding: 0; margin: 0; display:flex; flex-direction:column; min-height:100vh;}
+        header { background: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .logo { font-size: 20px; font-weight: bold; color: var(--secondary); display:flex; align-items:center; gap:10px;}
+        .login-btn { cursor:pointer; background:var(--bg); border:none; padding:8px 15px; border-radius:20px; font-weight:bold; color:var(--secondary); transition:0.3s;}
+        .login-btn:hover { background:#e1e8ed; }
+        .container { max-width: 1000px; margin: 30px auto; flex:1; width:100%; padding: 0 20px;}
+        h1 { text-align: center; color: var(--secondary); margin-bottom: 30px;}
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; display:flex; flex-direction:column; justify-content:space-between;}
+        .card h3 { color: var(--primary); margin: 0 0 10px 0; }
+        .card p { margin: 5px 0; font-size:14px; color:#555;}
+        .card button { margin-top: 15px; background: var(--primary); color: white; border: none; padding: 10px; width: 100%; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s;}
+        .card button:hover { background: #2980b9; }
+
+        /* Modals */
+        .modal-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:none; justify-content:center; align-items:center; z-index:100;}
+        .modal { background:white; padding:30px; border-radius:12px; width:100%; max-width:400px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); position:relative;}
+        .close-btn { position:absolute; top:15px; right:15px; font-size:20px; cursor:pointer; border:none; background:none; color:#999;}
+        .form-group { margin-bottom: 15px; text-align:left;}
+        label { display: block; font-weight: bold; margin-bottom: 5px; font-size:14px;}
+        input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box;}
+        button[type="submit"] { background: var(--primary); color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; font-size: 16px; font-weight:bold; cursor: pointer; margin-top:10px;}
         
-        .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; margin-top: 20px; }
-        .card { border: 1px solid #eee; border-radius: 8px; overflow: hidden; }
-        .card img { width: 100%; height: 160px; object-fit: cover; }
-        .card .info { padding: 10px; text-align: center; background: #fafafa; }
-        .card p { margin: 0; font-weight: bold; }
-        .card span { font-size: 12px; color: #7f8c8d; }
+        .toast { position:fixed; bottom:20px; right:20px; background:var(--secondary); color:white; padding:15px 25px; border-radius:8px; display:none; z-index:1000;}
     </style>
+    <!-- Compresor -->
+    <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.1/dist/browser-image-compression.js"></script>
 </head>
 <body>
 
+    <header>
+        <div class="logo">🎓 Colegio Académico</div>
+        <button class="login-btn" onclick="openLogin()">👤 Acceso Profesores</button>
+    </header>
+
     <div class="container">
-        <h1>Sistema de Entregas - Colegio Académico</h1>
-        
-        <form id="formEntrega">
-            <div class="form-group">
-                <label>Nombre del Alumno:</label>
-                <input type="text" id="nombre" required placeholder="Ej. Ana Pérez">
-            </div>
-            <div class="form-group">
-                <label>Grado:</label>
-                <select id="grado" required>
-                    <option value="">Selecciona un grado...</option>
-                    <option value="1º Primaria">1º Primaria</option>
-                    <option value="2º Primaria">2º Primaria</option>
-                    <option value="3º Primaria">3º Primaria</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Captura del Trabajo:</label>
-                <input type="file" id="imagen" accept="image/*" required>
-            </div>
-            <button type="submit" id="btnSubmit">Subir Trabajo</button>
-        </form>
-
-        <hr style="margin: 40px 0; border-top: 1px solid #eee;">
-
-        <h2>Galería Escolar</h2>
-        <div id="galeria" class="gallery"></div>
+        <h1>Portal del Estudiante - Entrega de Trabajos</h1>
+        <div id="asignaciones-grid" class="grid">
+            <p>Cargando asignaciones...</p>
+        </div>
     </div>
 
+    <!-- Modal Profesores -->
+    <div class="modal-overlay" id="loginModal">
+        <div class="modal">
+            <button class="close-btn" onclick="closeLogin()">×</button>
+            <h2 style="margin-top:0;">Acceso Profesores</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label>Usuario</label>
+                    <input type="text" id="usuario" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label>Contraseña</label>
+                    <input type="password" id="password" required autocomplete="current-password">
+                </div>
+                <button type="submit">Entrar</button>
+            </form>
+            <p id="loginError" style="color:red; font-size:14px; display:none;"></p>
+        </div>
+    </div>
+
+    <!-- Modal Subida de Tarea -->
+    <div class="modal-overlay" id="entregaModal">
+        <div class="modal">
+            <button class="close-btn" onclick="closeEntrega()">×</button>
+            <h2 id="entregaTitulo" style="margin-top:0;">Subir Trabajo</h2>
+            <form id="entregaForm">
+                <input type="hidden" id="asignacion_id">
+                <div class="form-group">
+                    <label>Nombre Completo Alumno</label>
+                    <input type="text" id="nombreAlumno" required placeholder="Ej. Ana Pérez">
+                </div>
+                <div class="form-group">
+                    <label>Grado del Alumno</label>
+                    <select id="gradoAlumno" required>
+                        <option value="">Selecciona el grado actual...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Captura del Trabajo (Auto-comprimida)</label>
+                    <input type="file" id="imagenEntrega" accept="image/*, application/pdf" required>
+                </div>
+                <button type="submit" id="btnSubir">Enviar Tarea</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
     <script>
-        const API_URL = 'https://control-academico-bie0.onrender.com'; 
+        const API_URL = '';
 
-        document.addEventListener('DOMContentLoaded', cargarTrabajos);
+        document.addEventListener('DOMContentLoaded', () => {
+            cargarGrados();
+            cargarAsignaciones();
+        });
 
-        document.getElementById('formEntrega').addEventListener('submit', async (e) => {
-            e.preventDefault(); 
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.style.display = 'block';
+            setTimeout(() => toast.style.display = 'none', 3000);
+        }
+
+        async function cargarGrados() {
+            try {
+                const res = await fetch(`${API_URL}/api/grados`);
+                const grados = await res.json();
+                const select = document.getElementById('gradoAlumno');
+                select.innerHTML = '<option value="">Selecciona el grado actual...</option>' + 
+                    grados.map(g => `<option value="${g.nombre}">${g.nombre}</option>`).join('');
+            } catch (e) {
+                console.error('Error cargando grados');
+            }
+        }
+
+        async function cargarAsignaciones() {
+            const grid = document.getElementById('asignaciones-grid');
+            try {
+                const res = await fetch(`${API_URL}/api/asignaciones`);
+                const asignaciones = await res.json();
+                
+                if (asignaciones.length === 0) {
+                    grid.innerHTML = '<p>No hay asignaciones activas en este momento.</p>';
+                    return;
+                }
+
+                grid.innerHTML = asignaciones.map(asig => `
+                    <div class="card">
+                        <div>
+                            <h3>${asig.titulo}</h3>
+                            <p><strong>Curso:</strong> ${asig.curso ? asig.curso : 'General'}</p>
+                            <p><strong>Grado Asignado:</strong> ${asig.grado}</p>
+                            <p><strong>Vencimiento:</strong> ${asig.fecha_vencimiento ? new Date(asig.fecha_vencimiento).toLocaleDateString() : 'Sin límite'}</p>
+                        </div>
+                        <button onclick="prepararEntrega('${asig._id}', '${asig.titulo}', '${asig.grado}')">Seleccionar y Subir Tarea</button>
+                    </div>
+                `).join('');
+            } catch (e) {
+                grid.innerHTML = '<p style="color:red">Error al cargar datos.</p>';
+            }
+        }
+
+        function prepararEntrega(id, titulo, grado) {
+            document.getElementById('asignacion_id').value = id;
+            document.getElementById('entregaTitulo').textContent = `Subir: ${titulo}`;
             
-            const btn = document.getElementById('btnSubmit');
-            btn.textContent = 'Enviando...';
+            // Auto seleccionar grado de la asignación si existe en el select
+            const selectGrado = document.getElementById('gradoAlumno');
+            if(grado && Array.from(selectGrado.options).some(o => o.value === grado)) {
+                selectGrado.value = grado;
+            }
+            
+            document.getElementById('entregaModal').style.display = 'flex';
+        }
+
+        function closeEntrega() {
+            document.getElementById('entregaModal').style.display = 'none';
+        }
+
+        document.getElementById('entregaForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btnSubir');
+            btn.textContent = 'Comprimiendo y Enviando...';
             btn.disabled = true;
 
+            const file = document.getElementById('imagenEntrega').files[0];
+            let fileToSend = file;
+
+            // Compresión de imagen si aplica
+            if (file.type.startsWith('image/')) {
+                const options = { maxSizeMB: 1, maxWidthOrHeight: 1920, useWebWorker: true };
+                try {
+                    fileToSend = await imageCompression(file, options);
+                } catch (error) {
+                    console.log('Error comprimiendo', error);
+                }
+            }
+
             const formData = new FormData();
-            formData.append('nombre', document.getElementById('nombre').value);
-            formData.append('grado', document.getElementById('grado').value);
-            formData.append('imagen', document.getElementById('imagen').files[0]);
+            formData.append('nombre', document.getElementById('nombreAlumno').value);
+            formData.append('grado', document.getElementById('gradoAlumno').value);
+            formData.append('asignacion_id', document.getElementById('asignacion_id').value);
+            formData.append('imagen', fileToSend, file.name);
 
             try {
-                const respuesta = await fetch(`${API_URL}/subir`, {
-                    method: 'POST',
-                    body: formData
-                });
-
-                if(respuesta.ok) {
-                    alert('¡Trabajo enviado con éxito!');
-                    document.getElementById('formEntrega').reset(); 
-                    cargarTrabajos(); 
+                const res = await fetch(`${API_URL}/api/subir`, { method: 'POST', body: formData });
+                if(res.ok) {
+                    showToast('¡Tarea enviada con éxito!');
+                    closeEntrega();
+                    document.getElementById('entregaForm').reset();
                 } else {
-                    alert('Hubo un error al guardar el trabajo');
+                    alert('Error en servidor al enviar la tarea');
                 }
-            } catch (error) {
-                console.error(error);
+            } catch (err) {
                 alert('Hubo un error de conexión');
             } finally {
-                btn.textContent = 'Subir Trabajo';
+                btn.textContent = 'Enviar Tarea';
                 btn.disabled = false;
             }
         });
 
-        async function cargarTrabajos() {
-            const contenedor = document.getElementById('galeria');
-            contenedor.innerHTML = '<p>Cargando entregas...</p>';
+        // Login Funcionality
+        function openLogin() { document.getElementById('loginModal').style.display = 'flex'; }
+        function closeLogin() { document.getElementById('loginModal').style.display = 'none'; }
 
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const u = document.getElementById('usuario').value;
+            const p = document.getElementById('password').value;
+            const errDiv = document.getElementById('loginError');
+            
             try {
-                const respuesta = await fetch(`${API_URL}/trabajos`);
-                const trabajos = await respuesta.json();
+                const res = await fetch(`${API_URL}/api/auth/login`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({usuario: u, password: p})
+                });
+                const data = await res.json();
                 
-                contenedor.innerHTML = ''; 
-
-                if(trabajos.length === 0) {
-                    contenedor.innerHTML = '<p>Aún no hay entregas.</p>';
+                if(res.ok) {
+                    localStorage.setItem('profesorToken', data.token);
+                    window.location.href = '/panel';
                 } else {
-                    trabajos.forEach(trabajo => {
-                        contenedor.innerHTML += `
-                            <div class="card">
-                                <img src="${trabajo.url_imagen}" alt="Trabajo">
-                                <div class="info">
-                                    <p>${trabajo.nombre_alumno}</p>
-                                    <span>${trabajo.grado}</span>
-                                </div>
-                            </div>
-                        `;
-                    });
+                    errDiv.style.display = 'block';
+                    errDiv.textContent = data.error;
                 }
-            } catch (error) {
-                contenedor.innerHTML = '<p style="color:red">Error al cargar la galería</p>';
+            } catch (e) {
+                errDiv.style.display = 'block';
+                errDiv.textContent = 'Error de conexión';
             }
-        }
+        });
     </script>
 </body>
 </html>
