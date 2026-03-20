@@ -168,14 +168,20 @@
 
         <!-- Vista: Entregas Pendientes -->
         <div id="view-entregas" class="view-section">
-            <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
-                <select id="filtro-grado" onchange="renderEntregas()">
+            <div style="display:flex; justify-content:space-between; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
+                <select id="filtro-grado-entregas" onchange="actualizarFiltrosRelacionados('entregas'); renderEntregas()" style="flex:1; min-width:150px;">
                     <option value="Todos">Todos los grados</option>
                 </select>
-                <select id="filtro-estado" onchange="renderEntregas()">
+                <select id="filtro-curso-entregas" onchange="renderEntregas()" style="flex:1; min-width:150px;">
+                    <option value="Todos">Todos los cursos</option>
+                </select>
+                <select id="filtro-asig-entregas" onchange="renderEntregas()" style="flex:1; min-width:150px;">
+                    <option value="Todos">Todas las tareas</option>
+                </select>
+                <select id="filtro-estado" onchange="renderEntregas()" style="flex:1; min-width:150px;">
+                    <option value="Todos">Cualquier Estado</option>
                     <option value="Pendiente">Pendientes</option>
                     <option value="Calificada">Calificadas</option>
-                    <option value="Todos">Todos</option>
                 </select>
             </div>
             <div id="grid-entregas" class="grid">
@@ -185,7 +191,20 @@
 
         <!-- Vista: Calificaciones -->
         <div id="view-calificaciones" class="view-section">
-            <h3>Historial General</h3>
+            <div style="display:flex; justify-content:space-between; margin-bottom:15px; align-items:center;">
+                <h3>Historial General</h3>
+            </div>
+            <div style="display:flex; gap:10px; margin-bottom:15px; flex-wrap:wrap;">
+                <select id="filtro-grado-calif" onchange="actualizarFiltrosRelacionados('calif'); renderCalificaciones()" style="flex:1; min-width:150px;">
+                    <option value="Todos">Todos los grados</option>
+                </select>
+                <select id="filtro-curso-calif" onchange="renderCalificaciones()" style="flex:1; min-width:150px;">
+                    <option value="Todos">Todos los cursos</option>
+                </select>
+                <select id="filtro-asig-calif" onchange="renderCalificaciones()" style="flex:1; min-width:150px;">
+                    <option value="Todos">Todas las tareas</option>
+                </select>
+            </div>
             <table>
                 <thead>
                     <tr><th>Alumno</th><th>Curso</th><th>Grado</th><th>Tarea</th><th>Estado</th><th>Nota</th></tr>
@@ -266,12 +285,13 @@
         let gradosActuales = [];
         let trabajoSeleccionado = null;
 
-        document.addEventListener('DOMContentLoaded', () => {
-            cargarGrados().then(() => {
-                cargarCursos();
-                cargarAsignaciones();
-                cargarEntregas();
-            });
+        document.addEventListener('DOMContentLoaded', async () => {
+            await cargarGrados();
+            await cargarCursos();
+            await cargarAsignaciones();
+            await cargarEntregas();
+            actualizarFiltrosRelacionados('entregas');
+            actualizarFiltrosRelacionados('calif');
         });
 
         const fetchOptions = (method = 'GET', body = null) => {
@@ -334,7 +354,34 @@
             const opciones = `<option value="">Seleccionar Grado</option>` + gradosActuales.map(g => `<option value="${g.nombre}">${g.nombre}</option>`).join('');
             document.getElementById('curso-grado').innerHTML = opciones;
             document.getElementById('asig-grado').innerHTML = opciones;
-            document.getElementById('filtro-grado').innerHTML = `<option value="Todos">Todos los grados</option>` + gradosActuales.map(g => `<option value="${g.nombre}">${g.nombre}</option>`).join('');
+            
+            const opcionesFiltros = `<option value="Todos">Todos los grados</option>` + gradosActuales.map(g => `<option value="${g.nombre}">${g.nombre}</option>`).join('');
+            const fe = document.getElementById('filtro-grado-entregas'); if(fe) fe.innerHTML = opcionesFiltros;
+            const fc = document.getElementById('filtro-grado-calif'); if(fc) fc.innerHTML = opcionesFiltros;
+        }
+
+        function actualizarFiltrosRelacionados(prefix) {
+            const elGradoSel = document.getElementById(`filtro-grado-${prefix}`);
+            if(!elGradoSel) return;
+            const gradoSel = elGradoSel.value;
+            
+            let cFilt = cursosActuales;
+            if(gradoSel !== 'Todos') cFilt = cFilt.filter(c => c.grado === gradoSel);
+            
+            let aFilt = asignacionesActuales;
+            if(gradoSel !== 'Todos') aFilt = aFilt.filter(a => a.grado === gradoSel);
+
+            const cSel = document.getElementById(`filtro-curso-${prefix}`);
+            const aSel = document.getElementById(`filtro-asig-${prefix}`);
+            
+            const prevC = cSel.value;
+            const prevA = aSel.value;
+
+            cSel.innerHTML = `<option value="Todos">Todos los cursos</option>` + cFilt.map(c => `<option value="${c.nombre}">${c.nombre}</option>`).join('');
+            if(cFilt.some(c=>c.nombre===prevC)) cSel.value = prevC;
+
+            aSel.innerHTML = `<option value="Todos">Todas las tareas</option>` + aFilt.map(a => `<option value="${a._id}">${a.titulo}</option>`).join('');
+            if(aFilt.some(a=>a._id===prevA)) aSel.value = prevA;
         }
 
         async function crearGrado() {
@@ -507,12 +554,16 @@
         }
 
         function renderEntregas() {
-            const filtroGrado = document.getElementById('filtro-grado').value;
-            const filtroEstado = document.getElementById('filtro-estado').value;
+            const fGrado = document.getElementById('filtro-grado-entregas').value;
+            const fCurso = document.getElementById('filtro-curso-entregas').value;
+            const fAsig = document.getElementById('filtro-asig-entregas').value;
+            const fEstado = document.getElementById('filtro-estado').value;
             
             let filtradas = entregasActuales;
-            if(filtroGrado !== 'Todos') filtradas = filtradas.filter(e => e.grado === filtroGrado);
-            if(filtroEstado !== 'Todos') filtradas = filtradas.filter(e => e.estado === filtroEstado);
+            if(fGrado !== 'Todos') filtradas = filtradas.filter(e => e.grado === fGrado);
+            if(fCurso !== 'Todos') filtradas = filtradas.filter(e => e.asignacion_id && e.asignacion_id.curso === fCurso);
+            if(fAsig !== 'Todos') filtradas = filtradas.filter(e => e.asignacion_id && e.asignacion_id._id === fAsig);
+            if(fEstado !== 'Todos') filtradas = filtradas.filter(e => e.estado === fEstado);
 
             const grid = document.getElementById('grid-entregas');
             if(filtradas.length === 0) {
@@ -543,8 +594,17 @@
         }
 
         function renderCalificaciones() {
+            const fGrado = document.getElementById('filtro-grado-calif').value;
+            const fCurso = document.getElementById('filtro-curso-calif').value;
+            const fAsig = document.getElementById('filtro-asig-calif').value;
+            
+            let filtradas = entregasActuales;
+            if(fGrado !== 'Todos') filtradas = filtradas.filter(e => e.grado === fGrado);
+            if(fCurso !== 'Todos') filtradas = filtradas.filter(e => e.asignacion_id && e.asignacion_id.curso === fCurso);
+            if(fAsig !== 'Todos') filtradas = filtradas.filter(e => e.asignacion_id && e.asignacion_id._id === fAsig);
+
             const tbody = document.getElementById('lista-calificaciones');
-            tbody.innerHTML = entregasActuales.map(t => {
+            tbody.innerHTML = filtradas.map(t => {
                 const cursoNombre = t.asignacion_id && t.asignacion_id.curso ? t.asignacion_id.curso : 'General';
                 const tareaNombre = t.asignacion_id ? t.asignacion_id.titulo : 'General';
                 return `
